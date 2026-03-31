@@ -18,6 +18,14 @@ const io = new Server(server, {
   cors: { origin: "*", methods: ["GET", "POST"] },
 });
 
+app.get("/health", (req, res) => {
+  res.status(200).json({
+    status: "up",
+    message: "Server is running smoothly",
+    timestamp: new Date().toISOString(),
+  });
+});
+
 app.post("/api/broadcast", (req, res) => {
   const { event, data } = req.body;
   io.emit(event, data);
