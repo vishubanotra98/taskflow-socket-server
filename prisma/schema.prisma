@@ -1,0 +1,185 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String  @map("user_id")
+  type              String
+  provider          String
+  providerAccountId String  @map("provider_account_id")
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique @map("session_token")
+  userId       String   @map("user_id")
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model User {
+  id                    String             @id @default(cuid())
+  name                  String?
+  firstName             String?            @map("first_name")
+  lastName              String?            @map("last_name")
+  email                 String?            @unique
+  password              String?
+  emailVerified         Boolean?           @map("email_verified")
+  tokenExpiry           DateTime?
+  verificationToken     String?
+  image                 String?
+  accounts              Account[]
+  sessions              Session[]
+  workspaces            WorkspaceMembers[]
+  teams                 TeamMembers[]
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+  assignedIssues        Issue[]            @relation("Assignee")
+  lastActiveWorkspaceId String?
+
+  @@map("users")
+}
+
+model Workspace {
+  id          String             @id @default(cuid())
+  name        String
+  members     WorkspaceMembers[]
+  teams       Team[]
+  statuses    Status[]
+  createdAt   DateTime           @default(now())
+  invitations Invitation[]
+}
+
+model WorkspaceMembers {
+  id          String    @id @default(cuid())
+  role        Role      @default(MEMBER)
+  user        User      @relation(fields: [userId], references: [id])
+  userId      String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+  workspaceId String
+
+  @@unique([userId, workspaceId])
+}
+
+model Team {
+  id          String        @id @default(cuid())
+  name        String
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id])
+  workspaceId String
+  members     TeamMembers[]
+  projects    Project[]
+
+  createdAt DateTime @default(now())
+}
+
+model TeamMembers {
+  id     String @id @default(cuid())
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
+  team   Team   @relation(fields: [teamId], references: [id])
+  teamId String
+
+  @@unique([userId, teamId])
+}
+
+model Project {
+  id        String   @id @default(cuid())
+  name      String
+  team      Team     @relation(fields: [teamId], references: [id])
+  teamId    String
+  issues    Issue[]
+  createdAt DateTime @default(now())
+}
+
+model Issue {
+  id          String   @id @default(cuid())
+  title       String
+  ticket_num  Int      @default(autoincrement())
+  description String   @db.Text
+  priority    Priority @default(LOW)
+  status      Status   @relation(fields: [statusId], references: [id])
+  statusId    String
+  assignee    User     @relation(name: "Assignee", fields: [assigneeId], references: [id])
+  assigneeId  String
+  project     Project  @relation(fields: [projectId], references: [id])
+  projectId   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Status {
+  id        String  @id @default(cuid())
+  name      String
+  color     String
+  order     Int     @default(0)
+  isDefault Boolean @default(false)
+  issues    Issue[]
+
+  workspace   Workspace? @relation(fields: [workspaceId], references: [id])
+  workspaceId String?
+}
+
+model Invitation {
+  id          String   @id @default(cuid())
+  email       String
+  token       String   @unique
+  workspaceId String
+  status      String   @default("PENDING")
+  expires     DateTime
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id])
+
+  @@unique([email, workspaceId])
+}
+
+model Activity {
+  id          String  @id @default(cuid())
+  action      String
+  entityTitle String
+  userId      String
+  workspaceId String
+  teamId      String
+  projectId   String
+  issueId     String?
+  beforeState Json?   @map("before_state")
+  afterState  Json?   @map("after_state")
+
+  created_at DateTime @default(now())
+}
+
+enum Role {
+  ADMIN
+  MEMBER
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
