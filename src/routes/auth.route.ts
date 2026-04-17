@@ -1,9 +1,8 @@
 import { Router } from "express";
-import { healthCheckController } from "../controller/health.controller.js";
+import { signUpController } from "../controller/auth.controller.js";
 
 const router = Router();
 
-// Health Check
-router.get("/health", healthCheckController);
+router.post("/signup", signUpController);
 
 export default router;

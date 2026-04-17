@@ -1,6 +1,6 @@
 import { PrismaPg } from "@prisma/adapter-pg";
-import { passwordHash } from "../helpers/passwordHashing";
-import { prisma } from "../lib/prisma";
+import { passwordHash } from "../../helpers/passwordHashing.js";
+import { prisma } from "../../lib/prisma.js";
 const adapter = new PrismaPg({
   connectionString: process.env.DATABASE_URL,
 });

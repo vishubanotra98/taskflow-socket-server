@@ -12,8 +12,9 @@
     "sourceMap": true,
     "resolveJsonModule": true,
     "noImplicitReturns": true,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
+    "jsx": "react-jsx"
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "src/helpers", "prisma44", "prisma/seed.ts"],
   "exclude": ["node_modules", "dist"]
 }
