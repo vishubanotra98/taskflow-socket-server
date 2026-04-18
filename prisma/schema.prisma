@@ -12,34 +12,15 @@ datasource db {
   provider = "postgresql"
 }
 
-model Account {
-  id                String  @id @default(cuid())
-  userId            String  @map("user_id")
-  type              String
-  provider          String
-  providerAccountId String  @map("provider_account_id")
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String? @db.Text
-  session_state     String?
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  user      User?    @relation(fields: [userId], references: [id])
+  userId    String?
+  createdAt DateTime @default(now())
+  expiresAt DateTime
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([provider, providerAccountId])
-  @@map("accounts")
-}
-
-model Session {
-  id           String   @id @default(cuid())
-  sessionToken String   @unique @map("session_token")
-  userId       String   @map("user_id")
-  expires      DateTime
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("sessions")
+  @@map("refresh_tokens")
 }
 
 model User {
@@ -52,9 +33,8 @@ model User {
   emailVerified         Boolean?           @map("email_verified")
   tokenExpiry           DateTime?
   verificationToken     String?
+  refreshTokens         RefreshToken[]
   image                 String?
-  accounts              Account[]
-  sessions              Session[]
   workspaces            WorkspaceMembers[]
   teams                 TeamMembers[]
   createdAt             DateTime           @default(now())

@@ -26,14 +26,17 @@ app.use(express.json());
 
 export const server = createServer(app);
 export const io = new Server(server, {
-  cors: { origin: "*", methods: ["GET", "POST", "DELETE", "PATCH", "PUT"] },
+  cors: {
+    origin: "http://localhost:3000",
+    methods: ["GET", "POST", "DELETE", "PATCH", "PUT"],
+  },
 });
 
 // healthCheckRoute
 app.use("/api/v1", healthCheckRoute);
 
 // Auth Routes
-app.use("/api/v1", authRoutes);
+app.use("/auth", authRoutes);
 
 export default app;
 

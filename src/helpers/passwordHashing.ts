@@ -5,3 +5,11 @@ export const passwordHash = async (password: string) => {
   const hashedPassword = await bcrypt.hash(password, saltRounds);
   return hashedPassword;
 };
+
+export const decryptHashedPassowrd = async (
+  password: string,
+  hashedPassword: string,
+) => {
+  const res = await bcrypt.compare(password, hashedPassword);
+  return res;
+};

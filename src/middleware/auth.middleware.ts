@@ -1,33 +1,23 @@
-// import jwt from "jsonwebtoken";
-// import { Request, Response, NextFunction } from "express";
+import jwt from "jsonwebtoken";
+import { Request, Response, NextFunction } from "express";
 
-// export const authMiddleware = (
-//   req: Request,
-//   res: Response,
-//   next: NextFunction,
-// ) => {
-//   const tokenHeader = req.headers.authorization;
+const SECRET = process.env.JWT_SECRET as string;
 
-//   if (tokenHeader) {
-//     const token = tokenHeader.split(" ")[1];
+export const authMiddleware = (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  const accessToken = req?.cookies?.accessToken;
 
-//     if (token) {
-//       jwt.verify(token, String(process.env.JWT_SECRET), (err, user) => {
-//         if (err) {
-//           res.status(401).json({ message: "User Not Found" });
-//         } else {
-//           if (!user) {
-//             return res.status(403);
-//           }
-//           if (typeof user === "string") {
-//             return res.send(403);
-//           }
-//           req.headers["userId"] = user.userId;
-//           next();
-//         }
-//       });
-//     }
-//   } else {
-//     res.status(404).json({ message: "User not Logged In." });
-//   }
-// };
+  if (accessToken) {
+    jwt.verify(accessToken, SECRET, (err: any, data: any) => {
+      if (err) {
+        return res?.status(401)?.json({
+          error: err,
+        });
+      }
+      next();
+    });
+  }
+};
