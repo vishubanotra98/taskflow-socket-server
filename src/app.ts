@@ -7,6 +7,8 @@ import morgon from "morgan";
 import { errorHandler } from "./middleware/error.middleware.js";
 import healthCheckRoute from "./routes/health.route.js";
 import authRoutes from "./routes/auth.route.js";
+import userRoutes from "./routes/user.route.js";
+import cookieParser from "cookie-parser";
 
 dotenv.config();
 
@@ -16,6 +18,7 @@ if (process.env.NODE_ENV != "production") {
   app.use(morgon("dev"));
 }
 
+app.use(cookieParser());
 app.use(
   cors({
     origin: "http://localhost:3000",
@@ -37,6 +40,9 @@ app.use("/api/v1", healthCheckRoute);
 
 // Auth Routes
 app.use("/auth", authRoutes);
+
+// user routes
+app.use("/api/v1", userRoutes);
 
 export default app;
 

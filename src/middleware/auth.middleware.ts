@@ -1,23 +1,46 @@
 import jwt from "jsonwebtoken";
-import { Request, Response, NextFunction } from "express";
+import { Request, Response, NextFunction, RequestHandler } from "express";
 
-const SECRET = process.env.JWT_SECRET as string;
+const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET as string;
 
-export const authMiddleware = (
+export const authMiddleware: RequestHandler = (
   req: Request,
   res: Response,
   next: NextFunction,
 ) => {
-  const accessToken = req?.cookies?.accessToken;
+  const accessToken = req?.cookies?.access_token;
 
-  if (accessToken) {
-    jwt.verify(accessToken, SECRET, (err: any, data: any) => {
-      if (err) {
-        return res?.status(401)?.json({
-          error: err,
-        });
-      }
-      next();
+  if (!accessToken) {
+    res.status(401).json({
+      success: false,
+      status: 401,
+      code: "UNAUTHORIZED",
+      message: "Authentication token is missing",
     });
+    return;
   }
+
+  jwt.verify(accessToken, ACCESS_TOKEN_SECRET, (err: any, data: any) => {
+    if (err) {
+      res.status(401).json({
+        success: false,
+        status: 401,
+        code:
+          err.name === "TokenExpiredError" ? "TOKEN_EXPIRED" : "INVALID_TOKEN",
+        message: "Invalid or expired token",
+      });
+      return;
+    }
+    if (!data?.user_id) {
+      res.status(401).json({
+        success: false,
+        status: 401,
+        code: "INVALID_TOKEN",
+        message: "Invalid token payload",
+      });
+      return;
+    }
+    req.userId = data.user_id;
+    next();
+  });
 };

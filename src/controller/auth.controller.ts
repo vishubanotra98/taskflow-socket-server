@@ -186,12 +186,9 @@ export const signInController = asyncHandler(
       },
     });
 
-    console.log("Access: ", accessToken);
-    console.log("Refresh: ", refresh_token);
-
     res.cookie("refresh_token", refresh_token, {
       httpOnly: true,
-      secure: true,
+      secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
       path: "/auth/refresh",
       maxAge: 30 * 24 * 60 * 60 * 1000,
@@ -199,7 +196,7 @@ export const signInController = asyncHandler(
 
     res.cookie("access_token", accessToken, {
       httpOnly: true,
-      secure: true,
+      secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
       maxAge: 15 * 60 * 1000,
     });
