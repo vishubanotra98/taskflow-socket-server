@@ -1,7 +1,6 @@
 import jwt from "jsonwebtoken";
 import { Request, Response, NextFunction, RequestHandler } from "express";
-
-const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET as string;
+import { ACCESS_TOKEN_SECRET } from "../constants/constant.js";
 
 export const authMiddleware: RequestHandler = (
   req: Request,

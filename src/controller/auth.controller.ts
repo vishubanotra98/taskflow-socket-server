@@ -8,10 +8,11 @@ import { prisma } from "../lib/prisma.js";
 import { resend } from "../lib/emailService.js";
 import { signInSchema, userSchema } from "../lib/schema.js";
 import Email from "../emails/templates/VerificationEmail.js";
-import jwt from "jsonwebtoken";
-
-const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET as string;
-const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET as string;
+import jwt, { JwtPayload } from "jsonwebtoken";
+import {
+  ACCESS_TOKEN_SECRET,
+  REFRESH_TOKEN_SECRET,
+} from "../constants/constant.js";
 
 export const signUpController = asyncHandler(
   async (req: Request, res: Response, next: NextFunction) => {
@@ -168,7 +169,6 @@ export const signInController = asyncHandler(
     const payload = {
       user_id: user?.id,
       email: user?.email,
-      emailVerified: user?.emailVerified,
     };
     const refresh_token = jwt.sign(payload, REFRESH_TOKEN_SECRET, {
       expiresIn: "30d",
@@ -264,6 +264,87 @@ export const emailVerificationController = asyncHandler(
       code: "USER_VERIFIED",
       message: "Verification Successfull.",
       data: { verified: true },
+    });
+  },
+);
+
+export const refresh = asyncHandler(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const refresh_token = req.cookies.refresh_token;
+
+    console.log("TOKENNNNNNNNNNNNN: ", refresh_token);
+
+    if (!refresh_token) {
+      return res.status(401).json({
+        success: false,
+        status: 401,
+        code: "NO_REFRESH_TOKEN",
+        message: "Please login to continue.",
+      });
+    }
+
+    let userData: JwtPayload;
+    try {
+      userData = jwt.verify(refresh_token, REFRESH_TOKEN_SECRET) as JwtPayload;
+    } catch (err: any) {
+      return res.status(401).json({
+        success: false,
+        status: 401,
+        code:
+          err.name === "TokenExpiredError"
+            ? "REFRESH_TOKEN_EXPIRED"
+            : "INVALID_REFRESH_TOKEN",
+        message: "Please login to continue.",
+      });
+    }
+
+    const tokenPresent = await prisma.refreshToken.findFirst({
+      where: { token: refresh_token, userId: userData?.user_id },
+    });
+
+    if (!tokenPresent) {
+      return res.status(401).json({
+        success: false,
+        status: 401,
+        code: "INVALID_REFRESH_TOKEN",
+        message: "Please login to continue.",
+      });
+    }
+
+    const payload = { user_id: userData.user_id, email: userData.email };
+
+    const new_refresh_token = jwt.sign(payload, REFRESH_TOKEN_SECRET, {
+      expiresIn: "30d",
+    });
+    const new_access_token = jwt.sign(payload, ACCESS_TOKEN_SECRET, {
+      expiresIn: "15m",
+    });
+
+    await prisma.refreshToken.update({
+      where: { id: tokenPresent.id },
+      data: { token: new_refresh_token },
+    });
+
+    res.cookie("refresh_token", new_refresh_token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      path: "/auth/refresh",
+      maxAge: 30 * 24 * 60 * 60 * 1000,
+    });
+
+    res.cookie("access_token", new_access_token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 15 * 60 * 1000,
+    });
+
+    return res.status(200).json({
+      success: true,
+      status: 200,
+      code: "TOKEN_REFRESHED",
+      message: "Token refreshed successfully.",
     });
   },
 );

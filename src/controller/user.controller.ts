@@ -2,6 +2,9 @@ import { Request, Response, NextFunction } from "express";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { prisma } from "../lib/prisma.js";
 import { DEFAULT_STATUSES } from "../constants/constant.js";
+import { v4 as uuid } from "uuid";
+import { resend } from "../lib/emailService.js";
+import UserInvitation from "../emails/templates/UserInvitation.js";
 
 export const fetchUserController = asyncHandler(
   async (req: Request, res: Response, next: NextFunction) => {
@@ -51,102 +54,65 @@ export const fetchUserController = asyncHandler(
   },
 );
 
-export const fetchWorkspaceController = asyncHandler(
+export const inviteUserController = asyncHandler(
   async (req: Request, res: Response, next: NextFunction) => {
-    const userId = req?.userId;
+    const { email, workspaceId, role } = req.body;
 
-    if (!userId || typeof userId !== "string") {
+    if (!email || !workspaceId || !role) {
       return res.status(400).json({
         success: false,
         status: 400,
-        code: "INVALID_USER_ID",
-        message: "Invalid or missing userId",
+        code: "MISSING_FIELDS",
+        message: "Email, workspaceId and role are required",
       });
     }
 
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        workspaces: { include: { workspace: true } },
+    const isUserExists = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (isUserExists) {
+      return res.status(400).json({
+        success: false,
+        status: 400,
+        code: "USER_ALREADY_EXISTS",
+        message: "User is already registered.",
+      });
+    }
+
+    const token = uuid();
+    const tokenExpiryDate = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    await prisma.invitation.upsert({
+      where: {
+        email_workspaceId: { email, workspaceId },
       },
+      update: {
+        token,
+        expires: tokenExpiryDate,
+        status: "PENDING",
+      },
+      create: {
+        email,
+        token,
+        workspaceId,
+        expires: tokenExpiryDate,
+        status: "PENDING",
+      },
+    });
+
+    await resend.emails.send({
+      from: "TaskFlow <onboarding@taskflow.vishubanotra.xyz>",
+      to: [email],
+      subject: "Join your team on Taskflow",
+      react: UserInvitation({ email, token, workspaceId, role }),
     });
 
     return res.status(200).json({
       success: true,
       status: 200,
-      code: "WORKSPACES_FETCHED",
-      message: "Fetched all workspaces.",
-      data: {
-        workspaces: user?.workspaces,
-      },
-    });
-  },
-);
-
-export const createWorkspaceController = asyncHandler(
-  async (req: Request, res: Response, next: NextFunction) => {
-    const { userId, workspaceName } = req.body;
-
-    if (!userId) {
-      return res.status(400).json({
-        success: false,
-        status: 400,
-        code: "INVALID_USER_ID",
-        message: "Invalid or missing userId",
-      });
-    }
-
-    if (!workspaceName) {
-      return res.status(400).json({
-        success: false,
-        status: 400,
-        code: "INVALID_WORKSPACE_NAME",
-        message: "Invalid or missing workspace name",
-      });
-    }
-
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-    });
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        status: 404,
-        code: "USER_NOT_FOUND",
-        message: "User not found.",
-      });
-    }
-
-    const workspace = await prisma.workspace.create({
-      data: {
-        name: workspaceName,
-        members: {
-          create: {
-            userId: userId,
-            role: "ADMIN",
-          },
-        },
-        statuses: {
-          create: DEFAULT_STATUSES.map((status) => ({
-            name: status.name,
-            color: status.color,
-            order: status.order,
-            isDefault: status.isDefault,
-          })),
-        },
-      },
-      include: { statuses: true },
-    });
-
-    return res.status(201).json({
-      success: true,
-      status: 201,
-      code: "WORKSPACE_CREATED",
-      message: "Workspace created successfully.",
-      data: {
-        workspace,
-      },
+      code: "INVITATION_SENT",
+      message: "Invitation sent successfully.",
     });
   },
 );
