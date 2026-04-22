@@ -15,6 +15,6 @@
     "noFallthroughCasesInSwitch": true,
     "jsx": "react-jsx"
   },
-  "include": ["src/**/*", "src/helpers", "prisma44", "prisma/seed.ts", "src/controller/health.controller.ts"],
+  "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]
 }
