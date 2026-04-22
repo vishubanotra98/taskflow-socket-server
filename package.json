@@ -6,7 +6,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "tsx watch src/index.ts",
-    "build": "npx prisma generate --config src/prisma.config.ts && tsc",
+    "build": "npm install && npx prisma generate --config src/prisma.config.ts && tsc",
     "prisma:generate": "prisma generate --config src/prisma.config.ts",
     "prisma:migrate": "prisma migrate dev --config src/prisma.config.ts",
     "start": "node dist/index.js"
