@@ -25,7 +25,7 @@ if (process.env.NODE_ENV != "production") {
 app.use(cookieParser());
 app.use(
   cors({
-    origin: BASE_URL_CLIENT,
+    origin: [BASE_URL_CLIENT, "http://localhost:3000"],
     credentials: true,
   }),
 );
@@ -34,7 +34,7 @@ app.use(express.json());
 export const server = createServer(app);
 export const io = new Server(server, {
   cors: {
-    origin: BASE_URL_CLIENT,
+    origin: [BASE_URL_CLIENT, "http://localhost:3000"],
     methods: ["GET", "POST", "DELETE", "PATCH", "PUT"],
   },
 });
