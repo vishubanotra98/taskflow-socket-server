@@ -286,3 +286,54 @@ export const lastActiveWorkspaceController = asyncHandler(
     });
   },
 );
+
+export const fetchStatusByWorkspaceController = asyncHandler(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const { workspaceId } = req.params;
+
+    if (!workspaceId || typeof workspaceId !== "string") {
+      return res.status(400).json({
+        success: false,
+        code: "INVALID_WORKSPACE_ID",
+        status: 400,
+        message: "Invalid Workspace Id",
+      });
+    }
+
+    const workspace = await prisma.workspace.findUnique({
+      where: { id: workspaceId },
+    });
+
+    if (!workspace) {
+      return res.status(404).json({
+        success: false,
+        code: "WORKSPACE_NOT_FOUND",
+        status: 404,
+        message: "Workspace does not exist.",
+      });
+    }
+
+    const statusList = await prisma.status.findMany({
+      where: { workspaceId },
+      include: {
+        _count: {
+          select: { issues: true },
+        },
+      },
+    });
+
+    return res.status(200).json({
+      success: true,
+      code: "STATUS_FETCHED",
+      status: 200,
+      message: "Status fetched.",
+      data: {
+        status: statusList,
+      },
+    });
+  },
+);
+
+export const createIssueController = asyncHandler(
+  async (req: Request, res: Response, next: NextFunction) => {},
+);
