@@ -1,20 +1,18 @@
 import express from "express";
 import { createServer } from "http";
 import { Server } from "socket.io";
-import dotenv from "dotenv";
 import cors from "cors";
 import morgon from "morgan";
+import cookieParser from "cookie-parser";
+import { BASE_URL_CLIENT } from "./constants/constant.js";
 import { errorHandler } from "./middleware/error.middleware.js";
+
+// Route Imports
 import healthCheckRoute from "./routes/health.route.js";
 import authRoutes from "./routes/auth.route.js";
 import userRoutes from "./routes/user.route.js";
 import workspaceRoutes from "./routes/workspace.route.js";
-import cookieParser from "cookie-parser";
-import { BASE_URL_CLIENT } from "./constants/constant.js";
-
-dotenv.config();
-
-console.log(BASE_URL_CLIENT);
+import issueRoutes from "./routes/issue.route.js";
 
 const app = express();
 
@@ -50,6 +48,9 @@ app.use("/api/v1", userRoutes);
 
 // Workspace Routes
 app.use("/api/v1", workspaceRoutes);
+
+// issue routes
+app.use("/api/v1", issueRoutes);
 
 export default app;
 

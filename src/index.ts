@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { server } from "./app.js";
 import { io } from "./app.js";
 import { PORT } from "./constants/constant.js";

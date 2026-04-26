@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { prisma } from "../lib/prisma.js";
 import { DEFAULT_STATUSES } from "../constants/constant.js";
+import dayjs from "dayjs";
 
 export const fetchWorkspaceController = asyncHandler(
   async (req: Request, res: Response, next: NextFunction) => {
@@ -36,6 +37,47 @@ export const fetchWorkspaceController = asyncHandler(
         workspaces: user?.workspaces,
         adminList,
       },
+    });
+  },
+);
+
+export const fetchWorkspaceMembers = asyncHandler(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const workspaceId = req.params.workspaceId as string;
+
+    if (!workspaceId) {
+      return res.status(400).json({
+        success: false,
+        status: 400,
+        code: "MISSING_FIELDS",
+        message: "workspaceId is required",
+      });
+    }
+
+    const members = await prisma.workspaceMembers.findMany({
+      where: { workspaceId },
+      select: {
+        role: true,
+        workspaceId: true,
+        user: {
+          select: {
+            id: true,
+            name: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            image: true,
+          },
+        },
+      },
+    });
+
+    return res.status(200).json({
+      success: true,
+      status: 200,
+      code: "MEMBERS_FETCHED",
+      message: "Workspace members fetched successfully.",
+      data: { members },
     });
   },
 );
@@ -334,6 +376,102 @@ export const fetchStatusByWorkspaceController = asyncHandler(
   },
 );
 
-export const createIssueController = asyncHandler(
-  async (req: Request, res: Response, next: NextFunction) => {},
+export const fetchActivityController = asyncHandler(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const workspaceId = req.params.workspaceId as string;
+
+    if (!workspaceId) {
+      return res.status(400).json({
+        success: false,
+        status: 400,
+        code: "MISSING_FIELDS",
+        message: "workspaceId is required",
+      });
+    }
+
+    const activities = await prisma.activity.findMany({
+      where: { workspaceId },
+      orderBy: { created_at: "desc" },
+    });
+
+    return res.status(200).json({
+      success: true,
+      status: 200,
+      code: "ACTIVITIES_FETCHED",
+      message: "Activities fetched successfully.",
+      data: { activities },
+    });
+  },
 );
+
+// Dashboard Data
+export const getCompletedTasksCount = asyncHandler(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const { statusId, workspaceId } = req.body;
+
+    if (!statusId || !workspaceId) {
+      return res.status(400).json({
+        success: false,
+        status: 400,
+        code: "MISSING_FIELDS",
+        message: "statusId and workspaceId are required",
+      });
+    }
+
+    const startDate = dayjs().subtract(6, "day").startOf("day").toDate();
+
+    const statusChangeActivities = await prisma.activity.findMany({
+      where: {
+        workspaceId,
+        action: "STATUS_CHANGED",
+        afterState: {
+          path: ["newStatusId"],
+          equals: statusId,
+        },
+        created_at: {
+          gte: startDate,
+        },
+      },
+      select: {
+        created_at: true,
+      },
+    });
+
+    const last7Days = Array.from({ length: 7 }).map((_, i) => {
+      const date = dayjs().subtract(6 - i, "day");
+      return {
+        day: date.format("ddd"),
+        date: date.format("YYYY-MM-DD"),
+        count: 0,
+      };
+    });
+
+    statusChangeActivities.forEach((activity) => {
+      const activityDate = dayjs(activity.created_at).format("YYYY-MM-DD");
+      const dayIndex = last7Days.findIndex((d) => d.date === activityDate);
+      if (dayIndex !== -1) {
+        last7Days[dayIndex].count += 1;
+      }
+    });
+
+    return res.status(200).json({
+      success: true,
+      status: 200,
+      code: "COMPLETED_TASKS_FETCHED",
+      message: "Completed tasks count fetched successfully.",
+      data: { completedTasks: last7Days },
+    });
+  },
+);
+
+// export const dashboardCountController = asyncHandler(
+//   async (req: Request, res: Response, next: NextFunction) => {
+//     const workspaceId = req.params.workspaceId as string;
+
+//     const totalTeamCount = prisma.team.count({ where: { workspaceId } });
+//     const totalProjectsCount = prisma.project.count({
+//       where: { team: { workspaceId } },
+//     });
+
+//   },
+// );
